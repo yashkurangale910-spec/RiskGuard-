@@ -1,10 +1,11 @@
 import apiClient from './apiClient';
 
 export const studentService = {
-    getStudents: () => apiClient.get('/api/students'),
+    getStudents: () => apiClient.get('/api/students/'),
     getStudent: (id) => apiClient.get(`/api/students/${id}`),
     updateStudent: (id, data) => apiClient.put(`/api/students/${id}`, data),
-    createStudent: (data) => apiClient.post('/api/students', data),
+    getStudentHistory: (id) => apiClient.get(`/api/students/${id}/history`),
+    createStudent: (data) => apiClient.post('/api/students/', data),
     addNote: (id, data) => apiClient.post(`/api/students/${id}/notes`, data),
     archiveStudent: (id) => apiClient.post(`/api/students/${id}/archive`),
 };
