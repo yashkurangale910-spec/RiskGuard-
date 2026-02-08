@@ -30,10 +30,13 @@ const Dashboard = () => {
 
                 setStats(statsRes.data || {});
                 setDropoutData(trendsRes.data || []);
-                setStudents(studentsRes.data || []);
+
+                // Sort students by risk score descending
+                const sortedStudents = (studentsRes.data || []).sort((a, b) => b.risk_score - a.risk_score);
+                setStudents(sortedStudents);
             } catch (err) {
                 console.error("Connectivity Error:", err);
-                setError("Unable to connect to the backend server.");
+                setError(`Unable to connect to the backend server: ${err.message}. Check if backend is running on http://127.0.0.1:8000`);
             } finally {
                 setLoading(false);
             }
@@ -51,7 +54,21 @@ const Dashboard = () => {
         );
     }
 
-    if (error) return null;
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[80vh] text-center px-4">
+                <AlertTriangle className="w-12 h-12 text-red-500 mb-4" />
+                <h3 className="text-xl font-bold text-white mb-2">Something went wrong</h3>
+                <p className="text-gray-400 mb-6">{error}</p>
+                <button
+                    onClick={() => window.location.reload()}
+                    className="px-6 py-2 bg-accent-blue hover:bg-accent-purple text-white rounded-lg font-bold transition-all"
+                >
+                    Retry Connection
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 max-w-[1600px] mx-auto pb-10 px-6">
@@ -215,20 +232,47 @@ const Dashboard = () => {
                             {/* Track */}
                             <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1f2937" strokeWidth="10" strokeLinecap="round" />
 
-                            {/* Attendance - Red - 40% */}
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" strokeWidth="10"
-                                strokeDasharray="251.2" strokeDashoffset="150" strokeLinecap="round" className="drop-shadow-[0_0_4px_rgba(239,68,68,0.5)]" />
+                            {(() => {
+                                const dist = stats.factor_distribution || { Attendance: 1, Grades: 1, Behavior: 1, Engagement: 1 };
+                                const total = Object.values(dist).reduce((a, b) => a + b, 0);
+                                const radius = 40;
+                                const circumference = 2 * Math.PI * radius;
 
-                            {/* Grades - Blue - 30% */}
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#3b82f6" strokeWidth="10"
-                                strokeDasharray="251.2" strokeDashoffset="175" strokeLinecap="round" transform="rotate(144 50 50)" className="drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]" />
+                                let currentOffset = 0;
+                                const colors = {
+                                    Attendance: "#ef4444",
+                                    Grades: "#3b82f6",
+                                    Behavior: "#f59e0b",
+                                    Engagement: "#4b5563"
+                                };
 
-                            {/* Behavior - Yellow - 20% */}
-                            <circle cx="50" cy="50" r="40" fill="transparent" stroke="#f59e0b" strokeWidth="10"
-                                strokeDasharray="251.2" strokeDashoffset="200" strokeLinecap="round" transform="rotate(252 50 50)" className="drop-shadow-[0_0_4px_rgba(245,158,11,0.5)]" />
+                                return Object.entries(dist).map(([key, value], index) => {
+                                    const percentage = (value / total) * 100;
+                                    const strokeDashoffset = circumference - (percentage / 100) * circumference;
+                                    const rotation = (currentOffset / total) * 360;
+                                    currentOffset += value;
+
+                                    return (
+                                        <circle
+                                            key={key}
+                                            cx="50"
+                                            cy="50"
+                                            r={radius}
+                                            fill="transparent"
+                                            stroke={colors[key] || "#4b5563"}
+                                            strokeWidth="10"
+                                            strokeDasharray={circumference}
+                                            strokeDashoffset={strokeDashoffset}
+                                            strokeLinecap="round"
+                                            transform={`rotate(${rotation} 50 50)`}
+                                            className="transition-all duration-1000 ease-out"
+                                        />
+                                    );
+                                });
+                            })()}
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                            <span className="text-4xl font-bold text-white">84</span>
+                            <span className="text-4xl font-bold text-white">{stats.high_risk_students}</span>
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-1">ALERTS</span>
                         </div>
                     </div>
@@ -300,10 +344,10 @@ const Dashboard = () => {
                                     </td>
                                     <td className="py-4 px-6">
                                         <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold border ${student.risk_score >= 80
-                                                ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
-                                                : student.risk_score >= 50
-                                                    ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                    : 'bg-green-500/10 text-green-500 border-green-500/20'
+                                            ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
+                                            : student.risk_score >= 50
+                                                ? 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                : 'bg-green-500/10 text-green-500 border-green-500/20'
                                             }`}>
                                             {student.risk_score}/100
                                         </span>

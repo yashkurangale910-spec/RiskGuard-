@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MoreVertical, Calendar, FileText, Download, Plus, Search, ChevronRight, Bell, Settings, Filter, Trash2, CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { interventionService } from '../api/services';
 
 const InterventionManagement = () => {
+    const navigate = useNavigate();
     const [columns, setColumns] = useState({
         pending: { title: 'Pending Action', count: 0, color: 'orange', cards: [] },
         inProgress: { title: 'In Progress', count: 0, color: 'blue', cards: [] },
@@ -24,7 +26,10 @@ const InterventionManagement = () => {
         setLoading(true);
         try {
             const response = await interventionService.getInterventions();
-            setColumns(response.data);
+            console.log("Fetched Interventions:", response.data);
+            if (response.data) {
+                setColumns(response.data);
+            }
         } catch (error) {
             console.error("Error fetching interventions:", error);
         } finally {
@@ -75,6 +80,10 @@ const InterventionManagement = () => {
         return <div className="flex items-center justify-center h-screen text-white font-bold p-8">Loading Support Actions...</div>;
     }
 
+    const handleExport = () => {
+        navigate('/reports');
+    };
+
     return (
         <div className="space-y-10 max-w-[1600px] mx-auto pb-20">
             {/* Nav & Header */}
@@ -90,11 +99,17 @@ const InterventionManagement = () => {
                         <p className="text-lg font-bold text-gray-500">Identify, assign, and track student support interventions in real-time.</p>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button className="btn-secondary h-[60px] px-8 rounded-2xl flex items-center gap-3 font-black text-sm uppercase tracking-widest hover:bg-white/[0.05] transition-all">
+                        <button
+                            onClick={handleExport}
+                            className="btn-secondary h-[60px] px-8 rounded-2xl flex items-center gap-3 font-black text-sm uppercase tracking-widest hover:bg-white/[0.05] transition-all"
+                        >
                             <Download className="w-5 h-5" />
                             Export Report
                         </button>
-                        <button className="bg-accent-blue hover:bg-accent-purple text-white h-[60px] px-8 rounded-2xl flex items-center gap-3 font-black text-sm uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(99,102,241,0.3)]">
+                        <button
+                            onClick={() => setShowSidebar(true)}
+                            className="bg-accent-blue hover:bg-accent-purple text-white h-[60px] px-8 rounded-2xl flex items-center gap-3 font-black text-sm uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(99,102,241,0.3)] hover:shadow-accent-purple/40 hover:-translate-y-1"
+                        >
                             <Plus className="w-5 h-5" />
                             New Action
                         </button>
@@ -127,13 +142,13 @@ const InterventionManagement = () => {
                         <MoreVertical className="w-4 h-4 text-gray-500 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
                     </div>
                 </div>
-            </div>
+            </div >
 
             {/* Kanban Board Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+            < div className="grid grid-cols-1 lg:grid-cols-3 gap-10" >
 
                 {/* Pending Column */}
-                <div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10">
+                < div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10" >
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-4">
                             <h3 className="text-xl font-black text-white tracking-tight">{columns.pending.title}</h3>
@@ -183,10 +198,10 @@ const InterventionManagement = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div >
 
                 {/* In Progress Column */}
-                <div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10">
+                < div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10" >
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-4">
                             <h3 className="text-xl font-black text-white tracking-tight">{columns.inProgress.title}</h3>
@@ -251,10 +266,10 @@ const InterventionManagement = () => {
                             </div>
                         ))}
                     </div>
-                </div>
+                </div >
 
                 {/* Resolved Column */}
-                <div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10">
+                < div className="space-y-8 bg-dark-bg/40 p-4 rounded-3xl border border-dark-border/10" >
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-4">
                             <h3 className="text-xl font-black text-white tracking-tight">{columns.resolved.title}</h3>
@@ -283,137 +298,139 @@ const InterventionManagement = () => {
                             </div>
                         ))}
                     </div>
-                </div>
-            </div>
+                </div >
+            </div >
 
             {/* Sidebar Slide-over Panel (Enhanced) */}
-            {showSidebar && (
-                <div className="fixed inset-0 z-[100] overflow-hidden">
-                    <div className="absolute inset-0 bg-dark-bg/80 backdrop-blur-md transition-opacity duration-500" onClick={() => setShowSidebar(false)}></div>
-                    <div className="absolute inset-y-0 right-0 max-w-full flex">
-                        <div className="w-screen max-w-2xl bg-dark-card border-l border-white/5 shadow-2xl animate-in slide-in-from-right duration-500 p-12 overflow-y-auto">
-                            <div className="flex items-center justify-between mb-12">
-                                <div className="space-y-1">
-                                    <h2 className="text-4xl font-black text-white tracking-tight">New Support Action</h2>
-                                    <p className="text-base font-bold text-gray-500 uppercase tracking-widest">Identifying intervention goals</p>
+            {
+                showSidebar && (
+                    <div className="fixed inset-0 z-[100] overflow-hidden">
+                        <div className="absolute inset-0 bg-dark-bg/80 backdrop-blur-md transition-opacity duration-500" onClick={() => setShowSidebar(false)}></div>
+                        <div className="absolute inset-y-0 right-0 max-w-full flex">
+                            <div className="w-screen max-w-2xl bg-dark-card border-l border-white/5 shadow-2xl animate-in slide-in-from-right duration-500 p-12 overflow-y-auto">
+                                <div className="flex items-center justify-between mb-12">
+                                    <div className="space-y-1">
+                                        <h2 className="text-4xl font-black text-white tracking-tight">New Support Action</h2>
+                                        <p className="text-base font-bold text-gray-500 uppercase tracking-widest">Identifying intervention goals</p>
+                                    </div>
+                                    <button onClick={() => setShowSidebar(false)} className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/5">
+                                        <Trash2 className="w-6 h-6" />
+                                    </button>
                                 </div>
-                                <button onClick={() => setShowSidebar(false)} className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-gray-400 hover:text-white hover:bg-red-500/20 hover:text-red-500 transition-all border border-white/5">
-                                    <Trash2 className="w-6 h-6" />
-                                </button>
-                            </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                                {/* Left Section Summary */}
-                                <div className="card bg-accent-blue shadow-[0_20px_40px_-10px_rgba(99,102,241,0.3)] p-8 space-y-8 relative overflow-hidden group">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] -mr-16 -mt-16 group-hover:bg-white/20 transition-all"></div>
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Attendance Rate</p>
-                                        <h4 className="text-5xl font-black text-white tracking-tighter">68%</h4>
-                                    </div>
-                                    <div className="space-y-2 pb-4 border-b border-white/10">
-                                        <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Credits Earned</p>
-                                        <h4 className="text-4xl font-black text-white tracking-tighter">12/30</h4>
-                                    </div>
-                                    <div className="flex items-center gap-4 text-white">
-                                        <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
-                                            <AlertCircle className="w-6 h-6" />
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                    {/* Left Section Summary */}
+                                    <div className="card bg-accent-blue shadow-[0_20px_40px_-10px_rgba(99,102,241,0.3)] p-8 space-y-8 relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-[40px] -mr-16 -mt-16 group-hover:bg-white/20 transition-all"></div>
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Attendance Rate</p>
+                                            <h4 className="text-5xl font-black text-white tracking-tighter">68%</h4>
                                         </div>
-                                        <p className="text-sm font-bold leading-tight">Student is currently tracking below diploma requirements.</p>
+                                        <div className="space-y-2 pb-4 border-b border-white/10">
+                                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Credits Earned</p>
+                                            <h4 className="text-4xl font-black text-white tracking-tighter">12/30</h4>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-white">
+                                            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center">
+                                                <AlertCircle className="w-6 h-6" />
+                                            </div>
+                                            <p className="text-sm font-bold leading-tight">Student is currently tracking below diploma requirements.</p>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* Form Fields Right */}
-                                <div className="space-y-8">
+                                    {/* Form Fields Right */}
+                                    <div className="space-y-8">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Student ID (e.g. ST-23)</label>
+                                            <input
+                                                type="text"
+                                                value={newIntervention.student_id}
+                                                onChange={(e) => setNewIntervention({ ...newIntervention, student_id: e.target.value })}
+                                                className="input-field w-full h-14 px-6 bg-dark-bg font-bold border-white/5"
+                                            />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Type of Support</label>
+                                            <select
+                                                value={newIntervention.title}
+                                                onChange={(e) => setNewIntervention({ ...newIntervention, title: e.target.value })}
+                                                className="input-field w-full h-14 px-6 bg-dark-bg font-bold cursor-pointer appearance-none border-white/5"
+                                            >
+                                                <option>Academic Tutoring</option>
+                                                <option>Social-Emotional</option>
+                                                <option>Financial Aid</option>
+                                                <option>Career Counseling</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="md:col-span-2 space-y-3">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Intervention Goal / Description</label>
+                                        <textarea
+                                            rows={4}
+                                            value={newIntervention.description}
+                                            onChange={(e) => setNewIntervention({ ...newIntervention, description: e.target.value })}
+                                            placeholder="E.g., Improve core class attendance to 90% over next 4 weeks through daily check-ins."
+                                            className="input-field w-full p-6 bg-dark-bg font-bold border-white/5 resize-none leading-relaxed"
+                                        />
+                                    </div>
+
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Student ID (e.g. ST-23)</label>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Follow-up Date</label>
                                         <input
-                                            type="text"
-                                            value={newIntervention.student_id}
-                                            onChange={(e) => setNewIntervention({ ...newIntervention, student_id: e.target.value })}
+                                            type="date"
+                                            value={newIntervention.next_date}
+                                            onChange={(e) => setNewIntervention({ ...newIntervention, next_date: e.target.value })}
                                             className="input-field w-full h-14 px-6 bg-dark-bg font-bold border-white/5"
                                         />
                                     </div>
+
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Type of Support</label>
-                                        <select
-                                            value={newIntervention.title}
-                                            onChange={(e) => setNewIntervention({ ...newIntervention, title: e.target.value })}
-                                            className="input-field w-full h-14 px-6 bg-dark-bg font-bold cursor-pointer appearance-none border-white/5"
-                                        >
-                                            <option>Academic Tutoring</option>
-                                            <option>Social-Emotional</option>
-                                            <option>Financial Aid</option>
-                                            <option>Career Counseling</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div className="md:col-span-2 space-y-3">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Intervention Goal / Description</label>
-                                    <textarea
-                                        rows={4}
-                                        value={newIntervention.description}
-                                        onChange={(e) => setNewIntervention({ ...newIntervention, description: e.target.value })}
-                                        placeholder="E.g., Improve core class attendance to 90% over next 4 weeks through daily check-ins."
-                                        className="input-field w-full p-6 bg-dark-bg font-bold border-white/5 resize-none leading-relaxed"
-                                    />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Follow-up Date</label>
-                                    <input
-                                        type="date"
-                                        value={newIntervention.next_date}
-                                        onChange={(e) => setNewIntervention({ ...newIntervention, next_date: e.target.value })}
-                                        className="input-field w-full h-14 px-6 bg-dark-bg font-bold border-white/5"
-                                    />
-                                </div>
-
-                                <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Priority Status</label>
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'urgent' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'urgent' ? 'bg-red-500 text-white shadow-xl shadow-red-500/20' : 'bg-red-500/10 border border-red-500/20 text-red-500'}`}>Urgent</button>
-                                        <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'high' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'high' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/20' : 'bg-white/5 border border-white/5 text-gray-500 hover:text-white'}`}>High</button>
-                                        <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'medium' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'medium' ? 'bg-accent-blue text-white shadow-xl shadow-accent-blue/20' : 'bg-white/5 border border-white/5 text-gray-500 hover:text-white'}`}>Medium</button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="mt-12 p-8 bg-dark-bg/50 border border-white/5 rounded-[2rem] space-y-6">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-accent-blue flex items-center justify-center">
-                                        <Bell className="w-5 h-5 text-white" />
-                                    </div>
-                                    <h4 className="text-xl font-black text-white tracking-tight uppercase tracking-wider">Activity History</h4>
-                                </div>
-                                <div className="space-y-6 pl-2">
-                                    <div className="flex gap-6 relative">
-                                        <div className="w-[2px] h-full bg-dark-border absolute left-[7px] top-6"></div>
-                                        <div className="w-4 h-4 rounded-full bg-accent-blue ring-4 ring-accent-blue/20 flex-shrink-0 relative z-10 mt-1"></div>
-                                        <div>
-                                            <p className="text-sm font-bold text-gray-300 leading-relaxed">Automated Alert: Student triggered risk threshold for chronic absence.</p>
-                                            <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mt-2">Oct 20, 2023 • 08:30 AM</p>
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Priority Status</label>
+                                        <div className="flex items-center gap-3">
+                                            <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'urgent' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'urgent' ? 'bg-red-500 text-white shadow-xl shadow-red-500/20' : 'bg-red-500/10 border border-red-500/20 text-red-500'}`}>Urgent</button>
+                                            <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'high' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'high' ? 'bg-orange-500 text-white shadow-xl shadow-orange-500/20' : 'bg-white/5 border border-white/5 text-gray-500 hover:text-white'}`}>High</button>
+                                            <button onClick={() => setNewIntervention({ ...newIntervention, priority: 'medium' })} className={`flex-1 h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${newIntervention.priority === 'medium' ? 'bg-accent-blue text-white shadow-xl shadow-accent-blue/20' : 'bg-white/5 border border-white/5 text-gray-500 hover:text-white'}`}>Medium</button>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div className="mt-12 flex items-center gap-6">
-                                <button onClick={() => setShowSidebar(false)} className="flex-1 h-[70px] bg-white/5 hover:bg-white/10 text-white rounded-[2rem] font-black text-lg uppercase tracking-widest transition-all">
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleCreateIntervention}
-                                    disabled={submitting}
-                                    className="flex-[2] h-[70px] bg-accent-blue hover:bg-accent-purple text-white rounded-[2rem] font-black text-lg uppercase tracking-widest transition-all shadow-2xl shadow-accent-blue/30 scale-100 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
-                                >
-                                    {submitting ? 'Syncing...' : 'Save Intervention'}
-                                </button>
+                                <div className="mt-12 p-8 bg-dark-bg/50 border border-white/5 rounded-[2rem] space-y-6">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-accent-blue flex items-center justify-center">
+                                            <Bell className="w-5 h-5 text-white" />
+                                        </div>
+                                        <h4 className="text-xl font-black text-white tracking-tight uppercase tracking-wider">Activity History</h4>
+                                    </div>
+                                    <div className="space-y-6 pl-2">
+                                        <div className="flex gap-6 relative">
+                                            <div className="w-[2px] h-full bg-dark-border absolute left-[7px] top-6"></div>
+                                            <div className="w-4 h-4 rounded-full bg-accent-blue ring-4 ring-accent-blue/20 flex-shrink-0 relative z-10 mt-1"></div>
+                                            <div>
+                                                <p className="text-sm font-bold text-gray-300 leading-relaxed">Automated Alert: Student triggered risk threshold for chronic absence.</p>
+                                                <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest mt-2">Oct 20, 2023 • 08:30 AM</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-12 flex items-center gap-6">
+                                    <button onClick={() => setShowSidebar(false)} className="flex-1 h-[70px] bg-white/5 hover:bg-white/10 text-white rounded-[2rem] font-black text-lg uppercase tracking-widest transition-all">
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreateIntervention}
+                                        disabled={submitting}
+                                        className="flex-[2] h-[70px] bg-accent-blue hover:bg-accent-purple text-white rounded-[2rem] font-black text-lg uppercase tracking-widest transition-all shadow-2xl shadow-accent-blue/30 scale-100 hover:scale-[1.02] active:scale-95 disabled:opacity-50"
+                                    >
+                                        {submitting ? 'Syncing...' : 'Save Intervention'}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Floating Action Button (Enhanced) */}
             <button
@@ -423,7 +440,7 @@ const InterventionManagement = () => {
                 <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
                 <Plus className="w-10 h-10 relative z-10 group-hover:rotate-90 transition-transform duration-500" />
             </button>
-        </div>
+        </div >
     );
 };
 
