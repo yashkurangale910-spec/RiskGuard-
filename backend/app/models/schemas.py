@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import List, Optional
+from typing import List, Optional, Dict
 from datetime import datetime
 
 # User Schemas
@@ -12,11 +12,18 @@ class UserCreate(UserBase):
     password: str
 
 class User(UserBase):
-    id: str
+    id: int
     is_active: bool = True
 
     class Config:
         from_attributes = True
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    email: Optional[str] = None
 
 # Student Schemas
 class RiskIndicator(BaseModel):
@@ -33,9 +40,12 @@ class StudentBase(BaseModel):
 class StudentCreate(StudentBase):
     attendance_rate: float
     gpa: float
+    academic_notes: Optional[str] = None
+    behavioral_notes: Optional[str] = None
+    personal_notes: Optional[str] = None
 
 class StudentUpdate(BaseModel):
-    attendance_rate: Optional[int] = None
+    attendance_rate: Optional[float] = None
     gpa: Optional[float] = None
     risk_score: Optional[int] = None
 
@@ -50,7 +60,19 @@ class StudentNote(StudentNoteBase):
     id: int
     student_id: int
     created_at: datetime
+    
+    class Config:
+        from_attributes = True
 
+class StudentList(StudentBase):
+    id: int
+    risk_score: int = 0
+    factors: Optional[str] = ""
+    last_event: Optional[str] = None
+    improvement_rate: float = 0.0
+    ai_insight: Optional[str] = None
+    is_active: bool = True
+    
     class Config:
         from_attributes = True
 
@@ -64,10 +86,10 @@ class RiskHistory(BaseModel):
         from_attributes = True
 
 class Student(StudentBase):
-    id: str
+    id: int
     risk_score: int = 0
-    factors: str = ""
-    last_event: str
+    factors: Optional[str] = ""
+    last_event: Optional[str] = None
     improvement_rate: float = 0.0
     ai_insight: Optional[str] = None
     is_active: bool = True
@@ -115,6 +137,7 @@ class StudentStats(BaseModel):
     high_risk_students: int
     active_interventions: int
     improvement_rate: float
+    factor_distribution: Dict[str, int]
 
 class DropoutTrend(BaseModel):
     month: str
