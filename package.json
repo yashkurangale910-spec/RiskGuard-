@@ -1,10 +1,12 @@
 {
-  "name": "riskguard-dashboard",
+  "name": "raj-project",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:backend": "cd backend && python -m uvicorn app.main:app --port 8000 --reload",
+    "dev:all": "npm run dev & npm run dev:backend",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
