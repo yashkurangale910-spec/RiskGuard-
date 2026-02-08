@@ -1,16 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Download, Calendar, Filter, ChevronDown, CheckCircle2, AlertCircle, FileSpreadsheet, Printer } from 'lucide-react';
+import { studentService, interventionService } from '../api/services';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const Reports = () => {
     const [generating, setGenerating] = useState(false);
     const [selectedReport, setSelectedReport] = useState('high-risk');
-
-    const recentReports = [
+    const [selectedFormat, setSelectedFormat] = useState('pdf');
+    const [dateRange, setDateRange] = useState('current');
+    const [recentReports, setRecentReports] = useState([
         { id: 1, name: 'High_Risk_Student_List_Oct2023.pdf', type: 'Risk Analysis', date: 'Oct 25, 2023', size: '2.4 MB', status: 'Ready' },
         { id: 2, name: 'Intervention_Outcomes_Q3.csv', type: 'Intervention', date: 'Oct 22, 2023', size: '856 KB', status: 'Ready' },
         { id: 3, name: 'Attendance_Summary_Sep2023.pdf', type: 'Attendance', date: 'Oct 01, 2023', size: '4.1 MB', status: 'Ready' },
         { id: 4, name: 'Dropout_Prediction_Model_v2.pdf', type: 'System Audit', date: 'Sep 15, 2023', size: '1.2 MB', status: 'Archived' },
-    ];
+    ]);
 
     const reportTypes = [
         { id: 'high-risk', label: 'High Risk Students List', desc: 'Detailed list of students with risk score > 70', icon: AlertCircle, color: 'text-red-500' },
@@ -18,13 +22,174 @@ const Reports = () => {
         { id: 'attendance', label: 'Chronic Absenteeism', desc: 'Students with < 85% attendance rate', icon: Calendar, color: 'text-orange-500' },
     ];
 
-    const handleGenerate = () => {
+    const generatePDFReport = async (data, reportType) => {
+        const doc = new jsPDF();
+        const today = new Date().toLocaleDateString();
+
+        // Header
+        doc.setFontSize(20);
+        doc.setTextColor(99, 102, 241);
+        doc.text('RiskGuard Analytics Report', 14, 20);
+
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated: ${today}`, 14, 27);
+        doc.text(`Report Type: ${reportTypes.find(r => r.id === reportType)?.label || reportType}`, 14, 32);
+
+        let tableData = [];
+        let tableHeaders = [];
+
+        if (reportType === 'high-risk') {
+            const highRiskStudents = data.filter(s => s.risk_score >= 70);
+            tableHeaders = [['Student ID', 'Name', 'Grade', 'Risk Score', 'Primary Factor', 'GPA', 'Attendance']];
+            tableData = highRiskStudents.map(s => [
+                s.student_id,
+                s.name,
+                s.grade,
+                `${s.risk_score}/100`,
+                s.factors?.split(', ')[0] || 'N/A',
+                s.gpa?.toFixed(2) || 'N/A',
+                `${s.attendance_rate}%`
+            ]);
+        } else if (reportType === 'attendance') {
+            const lowAttendance = data.filter(s => s.attendance_rate < 85);
+            tableHeaders = [['Student ID', 'Name', 'Grade', 'Attendance Rate', 'Risk Score', 'Last Event']];
+            tableData = lowAttendance.map(s => [
+                s.student_id,
+                s.name,
+                s.grade,
+                `${s.attendance_rate}%`,
+                `${s.risk_score}/100`,
+                s.last_event || 'No recent activity'
+            ]);
+        } else if (reportType === 'intervention') {
+            // For intervention reports, we expect intervention data
+            tableHeaders = [['Student ID', 'Name', 'Intervention', 'Status', 'Priority', 'Progress', 'Next Date']];
+            tableData = data.map(i => [
+                i.studentId || 'N/A',
+                i.name || 'N/A',
+                i.tag || i.trigger || 'N/A',
+                i.status || 'pending',
+                i.priority || 'medium',
+                i.goalProgress ? `${i.goalProgress}%` : '0%',
+                i.nextDate || 'Not scheduled'
+            ]);
+        }
+
+        doc.autoTable({
+            head: tableHeaders,
+            body: tableData,
+            startY: 40,
+            theme: 'grid',
+            headStyles: { fillColor: [99, 102, 241], textColor: 255, fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [245, 247, 250] },
+            margin: { top: 40 }
+        });
+
+        // Add summary
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Total Students: ${tableData.length}`, 14, finalY);
+
+        return doc;
+    };
+
+    const generateCSVReport = (data, reportType) => {
+        let csvContent = '';
+        let rows = [];
+
+        if (reportType === 'high-risk') {
+            const highRiskStudents = data.filter(s => s.risk_score >= 70);
+            csvContent = 'Student ID,Name,Grade,Risk Score,Primary Factor,GPA,Attendance Rate\n';
+            rows = highRiskStudents.map(s =>
+                `${s.student_id},"${s.name}",${s.grade},${s.risk_score},"${s.factors?.split(', ')[0] || 'N/A'}",${s.gpa || 'N/A'},${s.attendance_rate}`
+            );
+        } else if (reportType === 'attendance') {
+            const lowAttendance = data.filter(s => s.attendance_rate < 85);
+            csvContent = 'Student ID,Name,Grade,Attendance Rate,Risk Score,Last Event\n';
+            rows = lowAttendance.map(s =>
+                `${s.student_id},"${s.name}",${s.grade},${s.attendance_rate},${s.risk_score},"${s.last_event || 'No recent activity'}"`
+            );
+        } else if (reportType === 'intervention') {
+            csvContent = 'Student ID,Name,Intervention,Status,Priority,Progress,Next Date\n';
+            rows = data.map(i =>
+                `${i.studentId || 'N/A'},"${i.name || 'N/A'}","${i.tag || i.trigger || 'N/A'}",${i.status || 'pending'},${i.priority || 'medium'},${i.goalProgress || 0}%,"${i.nextDate || 'Not scheduled'}"`
+            );
+        }
+
+        csvContent += rows.join('\n');
+        return csvContent;
+    };
+
+    const handleGenerate = async () => {
         setGenerating(true);
-        // Simulate generation delay
-        setTimeout(() => {
+        try {
+            let reportData;
+
+            // Fetch appropriate data based on report type
+            if (selectedReport === 'intervention') {
+                const response = await interventionService.getInterventions();
+                // Flatten all intervention cards from all columns
+                const allInterventions = [];
+                Object.values(response.data).forEach(column => {
+                    if (column.cards) {
+                        allInterventions.push(...column.cards);
+                    }
+                });
+                reportData = allInterventions;
+            } else {
+                // For student-based reports
+                const response = await studentService.getStudents();
+                reportData = response.data;
+            }
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const reportLabel = reportTypes.find(r => r.id === selectedReport)?.label.replace(/\s+/g, '_');
+
+            if (selectedFormat === 'pdf') {
+                const pdf = await generatePDFReport(reportData, selectedReport);
+                const fileName = `${reportLabel}_${timestamp}.pdf`;
+                pdf.save(fileName);
+
+                // Add to recent reports
+                setRecentReports(prev => [{
+                    id: Date.now(),
+                    name: fileName,
+                    type: reportTypes.find(r => r.id === selectedReport)?.label,
+                    date: new Date().toLocaleDateString(),
+                    size: '~250 KB',
+                    status: 'Ready'
+                }, ...prev]);
+            } else {
+                const csv = generateCSVReport(reportData, selectedReport);
+                const fileName = `${reportLabel}_${timestamp}.csv`;
+
+                // Create download link
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+
+                // Add to recent reports
+                setRecentReports(prev => [{
+                    id: Date.now(),
+                    name: fileName,
+                    type: reportTypes.find(r => r.id === selectedReport)?.label,
+                    date: new Date().toLocaleDateString(),
+                    size: '~150 KB',
+                    status: 'Ready'
+                }, ...prev]);
+            }
+
+            alert(`${selectedFormat.toUpperCase()} report generated successfully!`);
+        } catch (error) {
+            console.error('Report generation error:', error);
+            alert('Failed to generate report. Please ensure the backend is running.');
+        } finally {
             setGenerating(false);
-            alert("Report generated successfully! (Simulation)");
-        }, 2000);
+        }
     };
 
     return (
@@ -54,8 +219,8 @@ const Reports = () => {
                                             key={type.id}
                                             onClick={() => setSelectedReport(type.id)}
                                             className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center gap-4 group ${selectedReport === type.id
-                                                    ? 'bg-accent-blue/10 border-accent-blue/50 ring-1 ring-accent-blue/50'
-                                                    : 'bg-[#1f2937] border-white/5 hover:bg-[#1f2937]/80 hover:border-white/10'
+                                                ? 'bg-accent-blue/10 border-accent-blue/50 ring-1 ring-accent-blue/50'
+                                                : 'bg-[#1f2937] border-white/5 hover:bg-[#1f2937]/80 hover:border-white/10'
                                                 }`}
                                         >
                                             <div className={`w-10 h-10 rounded-lg bg-[#0f1523] flex items-center justify-center border border-white/5 ${type.color}`}>
@@ -74,11 +239,23 @@ const Reports = () => {
                             <div className="mt-8 space-y-4">
                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Format & Range</label>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <button className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#1f2937] border border-white/5 hover:border-white/10 text-gray-300 font-bold text-xs transition-colors hover:text-white hover:bg-[#2d3748]">
+                                    <button
+                                        onClick={() => setSelectedFormat('pdf')}
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-xs transition-all ${selectedFormat === 'pdf'
+                                            ? 'bg-accent-blue/10 border-accent-blue/50 text-accent-blue ring-1 ring-accent-blue/50'
+                                            : 'bg-[#1f2937] border-white/5 hover:border-white/10 text-gray-300 hover:text-white hover:bg-[#2d3748]'
+                                            }`}
+                                    >
                                         <FileText className="w-4 h-4" />
                                         PDF Report
                                     </button>
-                                    <button className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[#1f2937] border border-white/5 hover:border-white/10 text-gray-300 font-bold text-xs transition-colors hover:text-white hover:bg-[#2d3748]">
+                                    <button
+                                        onClick={() => setSelectedFormat('csv')}
+                                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border font-bold text-xs transition-all ${selectedFormat === 'csv'
+                                            ? 'bg-accent-blue/10 border-accent-blue/50 text-accent-blue ring-1 ring-accent-blue/50'
+                                            : 'bg-[#1f2937] border-white/5 hover:border-white/10 text-gray-300 hover:text-white hover:bg-[#2d3748]'
+                                            }`}
+                                    >
                                         <FileSpreadsheet className="w-4 h-4" />
                                         CSV Data
                                     </button>
