@@ -1,13 +1,20 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Users, FileText, BarChart3, Settings as SettingsIcon, Shield } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const Sidebar = () => {
+    const navigate = useNavigate();
+    const { user } = useAuth();
     const menuItems = [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: Users, label: 'Student Directory', path: '/students' },
         { icon: FileText, label: 'Intervention Plans', path: '/interventions' },
         { icon: BarChart3, label: 'Reports', path: '/reports' },
     ];
+
+    if (user?.role === 'admin') {
+        menuItems.push({ icon: SettingsIcon, label: 'User Management', path: '/admin/users' });
+    }
 
     return (
         <aside className="w-72 bg-[#0a0e1a] border-r border-white/5 h-screen fixed left-0 top-0 flex flex-col z-[100] shadow-[10px_0_50px_rgba(0,0,0,0.3)]">
@@ -18,7 +25,7 @@ const Sidebar = () => {
                         <Shield className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                        <h1 className="text-lg font-black text-white tracking-tight leading-tight">SOOR COLLEGE</h1>
+                        <h1 className="text-lg font-black text-white tracking-tight leading-tight">RAJ PROJECT</h1>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Dropout Identification & Support System</p>
                     </div>
                 </div>
@@ -48,7 +55,10 @@ const Sidebar = () => {
 
             {/* Bottom Actions */}
             <div className="p-6 mt-auto space-y-6">
-                <button className="flex items-center gap-3 px-5 text-gray-400 hover:text-white transition-colors w-full">
+                <button
+                    onClick={() => navigate('/settings')}
+                    className="flex items-center gap-3 px-5 text-gray-400 hover:text-white transition-colors w-full"
+                >
                     <SettingsIcon className="w-5 h-5" />
                     <span className="font-medium text-sm">Settings</span>
                 </button>
