@@ -29,8 +29,14 @@ const StudentProfile = () => {
         const fetchStudent = async () => {
             setLoading(true);
             try {
-                const response = await studentService.getStudent(urlId);
-                setFormData(response.data);
+                const [studentRes, historyRes] = await Promise.all([
+                    studentService.getStudent(urlId),
+                    studentService.getStudentHistory(urlId)
+                ]);
+                setFormData({
+                    ...studentRes.data,
+                    history: historyRes.data
+                });
             } catch (error) {
                 console.error("Error fetching student:", error);
             } finally {
@@ -60,8 +66,14 @@ const StudentProfile = () => {
             });
 
             // Refresh data to get new chart points and insights
-            const refreshed = await studentService.getStudent(urlId);
-            setFormData(refreshed.data);
+            const [refreshed, historyRes] = await Promise.all([
+                studentService.getStudent(urlId),
+                studentService.getStudentHistory(urlId)
+            ]);
+            setFormData({
+                ...refreshed.data,
+                history: historyRes.data
+            });
 
             setSaveStatus('success');
             setTimeout(() => setSaveStatus(null), 3000);

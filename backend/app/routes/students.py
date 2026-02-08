@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from app.config.database import get_db
 from app.models.database_models import Student as DBStudent, RiskHistory, StudentNote
-from app.models.schemas import Student, StudentUpdate, StudentCreate, StudentNoteCreate
+from app.models.schemas import Student, StudentUpdate, StudentCreate, StudentNoteCreate, StudentList
 from app.logic.risk_engine import calculate_student_risk
 from app.logic.ai_service import get_ai_risk_insight
 from typing import List
@@ -11,12 +11,14 @@ from sqlalchemy.orm import selectinload
 
 router = APIRouter(prefix="/api/students", tags=["students"])
 
-@router.get("/", response_model=List[Student])
+@router.get("", response_model=List[StudentList])
+@router.get("/", response_model=List[StudentList])
 async def get_students(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(DBStudent).where(DBStudent.is_active == True))
     students = result.scalars().all()
     return students
 
+@router.post("", status_code=status.HTTP_201_CREATED)
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_db)):
     # 1. Calculate Initial Risk
@@ -47,6 +49,16 @@ async def create_student(student: StudentCreate, db: AsyncSession = Depends(get_
     await db.commit()
     await db.refresh(db_student)
     
+    # Process Notes
+    if student.academic_notes:
+        db.add(StudentNote(student_id=db_student.id, content=student.academic_notes, category="academic"))
+    if student.behavioral_notes:
+        db.add(StudentNote(student_id=db_student.id, content=student.behavioral_notes, category="behavioral"))
+    if student.personal_notes:
+        db.add(StudentNote(student_id=db_student.id, content=student.personal_notes, category="personal"))
+    
+    await db.commit()
+
     # Seed initial history
     history = RiskHistory(student_id=db_student.id, risk_score=db_student.risk_score)
     db.add(history)
@@ -120,6 +132,13 @@ async def update_student(student_id: str, update: StudentUpdate, db: AsyncSessio
             print(f"AI Insight Generation Error: {ai_err}")
             student.ai_insight = "Insight generation in progress or temporarily unavailable."
 
+        # 3. Record History
+        history_entry = RiskHistory(
+            student_id=student.id,
+            risk_score=student.risk_score
+        )
+        db.add(history_entry)
+
         await db.commit()
         return {
             "message": "Student updated successfully",
@@ -130,6 +149,21 @@ async def update_student(student_id: str, update: StudentUpdate, db: AsyncSessio
     except Exception as e:
         print(f"CRITICAL API ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{student_id}/history")
+async def get_student_history(student_id: str, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(DBStudent).where(DBStudent.student_id == student_id))
+    student = result.scalars().first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+        
+    history_result = await db.execute(
+        select(RiskHistory)
+        .where(RiskHistory.student_id == student.id)
+        .order_by(RiskHistory.recorded_at.desc())
+    )
+    history = history_result.scalars().all()
+    return history
 
 @router.post("/{student_id}/archive")
 async def archive_student(student_id: str, db: AsyncSession = Depends(get_db)):
