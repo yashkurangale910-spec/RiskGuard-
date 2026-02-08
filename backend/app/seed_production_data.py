@@ -1,7 +1,8 @@
 import asyncio
 import random
+from datetime import datetime, timedelta
 from app.config.database import AsyncSessionLocal, engine, Base
-from app.models.database_models import Student, Intervention
+from app.models.database_models import Student, Intervention, RiskHistory
 
 STUDENTS_DATA = [
     ("Raj Mundhe", "SYBsc.IT A", "39", "2025-26"),
@@ -45,13 +46,49 @@ STUDENTS_DATA = [
     ("Sibaraj Lenka", "SYBsc.IT A", "74", "2025-26"),
 ]
 
+INTERVENTION_TEMPLATES = [
+    {
+        "title": "Academic Tutoring",
+        "descriptions": ["Struggling with Calculus concepts", "Need help with Python basics", "Failing multiple quizzes"],
+        "priority": "high"
+    },
+    {
+        "title": "Behavioral Counseling",
+        "descriptions": ["Disruptive in class", "Consistently late", "Conflict with peers"],
+        "priority": "medium"
+    },
+    {
+        "title": "Attendance Monitoring",
+        "descriptions": ["Absent from 3 consecutive labs", "Pattern of Monday absences", "below 75% attendance"],
+        "priority": "urgent"
+    },
+    {
+        "title": "Parent Meeting",
+        "descriptions": ["Discuss sudden grade drop", "Behavioral concerns requiring guardian input"],
+        "priority": "high"
+    }
+]
+
 async def seed():
+    # Recreate tables to clear old data
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+
     async with AsyncSessionLocal() as session:
+        created_students = []
         for name, grade, seat_no, year in STUDENTS_DATA:
-            # Generate some random risk data for demonstration
+            # Generate risk data
             risk_score = random.randint(10, 95)
             attendance = random.uniform(60, 100)
             gpa = random.uniform(1.5, 4.0)
+            
+            # Determine primary factor based on random logic
+            factors = []
+            if risk_score > 70:
+                if attendance < 75: factors.append("Attendance")
+                if gpa < 2.5: factors.append("Grades")
+                if random.random() > 0.7: factors.append("Behavior")
             
             student = Student(
                 student_id=f"ST-{seat_no}",
@@ -62,12 +99,52 @@ async def seed():
                 attendance_rate=round(attendance, 1),
                 gpa=round(gpa, 2),
                 last_event="Database Seeded",
-                improvement_rate=round(random.uniform(-5, 5), 1)
+                improvement_rate=round(random.uniform(-5, 5), 1),
+                factors=", ".join(factors)
             )
             session.add(student)
-        
+            await session.flush() # Get student id
+            
+            # 3. Create historical data (3-5 points)
+            for i in range(random.randint(3, 6)):
+                # Backdate by 7-30 days each step
+                recorded_at = datetime.now() - timedelta(days=i*15)
+                history = RiskHistory(
+                    student_id=student.id,
+                    risk_score=max(0, min(100, student.risk_score + random.randint(-20, 20))),
+                    recorded_at=recorded_at
+                )
+                session.add(history)
+
+            created_students.append(student)
+
+        # Create Interventions for High Risk Students
+        count_interventions = 0
+        for student in created_students:
+            if student.risk_score > 60:
+                # Add 1-2 interventions
+                num_interventions = random.randint(1, 2)
+                for _ in range(num_interventions):
+                    template = random.choice(INTERVENTION_TEMPLATES)
+                    status = random.choice(["pending", "inProgress", "resolved"])
+                    progress = random.randint(0, 100) if status != "pending" else 0
+                    if status == "resolved": progress = 100
+
+                    intervention = Intervention(
+                        student_id=student.id,
+                        title=template["title"],
+                        description=random.choice(template["descriptions"]),
+                        status=status,
+                        priority=template["priority"],
+                        progress=progress,
+                        next_date=(datetime.now() + timedelta(days=random.randint(1, 14))).strftime("%Y-%m-%d"),
+                        notes_count=random.randint(0, 5)
+                    )
+                    session.add(intervention)
+                    count_interventions += 1
+
         await session.commit()
-        print(f"Successfully seeded {len(STUDENTS_DATA)} students.")
+        print(f"Successfully seeded {len(created_students)} students and {count_interventions} interventions.")
 
 if __name__ == "__main__":
     asyncio.run(seed())
